@@ -10,31 +10,41 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      #used to cache dependencies with a timeout
-      - name: Get Date
-        id: get-date
-        run: |
-          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
-
+      # Cache Buildozer global directory
       - name: Cache Buildozer global directory
         uses: actions/cache@v2
         with:
           path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }} # Replace with your path
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-      - uses: actions/cache@v2
+      # Cache Buildozer local directory
+      - name: Cache Buildozer local directory
+        uses: actions/cache@v2
         with:
           path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+          key: ${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
+      # Get the current date to use as part of the cache key
+      - name: Get Date
+        id: get-date
+        run: echo "::set-output name=date::$(/bin/date -u '+%Y%m%d')"
+
+      # Install Buildozer and dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip openjdk-8-jdk
+          pip3 install --upgrade buildozer cython
+
+      # Build the APK using Buildozer
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         id: buildozer
         with:
-          command: buildozer android debug
+          command: android debug
           buildozer_version: stable
 
+      # Upload the built APK as an artifact
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
